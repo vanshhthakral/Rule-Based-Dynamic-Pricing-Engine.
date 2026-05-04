@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { mockHotels } from '../data/mockHotels';
-import { ArrowLeft, CreditCard, Sparkles, Info, Activity } from 'lucide-react';
+import { ArrowLeft, CreditCard, Smartphone, Sparkles, Info, Activity } from 'lucide-react';
 import './BookingConfirmation.css';
 
 const BookingConfirmation = () => {
@@ -9,7 +9,9 @@ const BookingConfirmation = () => {
   const navigate = useNavigate();
   const routeLocation = useLocation();
   const routeState = routeLocation.state || {};
-  const [hotel, setHotel] = useState(null);
+  
+  const hotel = mockHotels.find(h => h.id === id);
+
   const [checkInDate, setCheckInDate] = useState(() => {
     if (routeState.checkInDate) return routeState.checkInDate;
     const d = new Date();
@@ -21,7 +23,7 @@ const BookingConfirmation = () => {
     d.setDate(d.getDate() + 1);
     return d.toISOString().split('T')[0];
   });
-  
+
   const [pricingData, setPricingData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,23 +35,20 @@ const BookingConfirmation = () => {
   })();
 
   useEffect(() => {
-    const foundHotel = mockHotels.find(h => h.id === id);
-    setHotel(foundHotel);
-    
-    if (foundHotel) {
+    if (hotel) {
       // Fetch dynamic price from Flask ML API
       const fetchPrice = async () => {
         try {
           // Use current real-world time for dynamic inputs
           const now = new Date();
           const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
-          
-          const ml = foundHotel.ml;
+          const ml = hotel.ml;
+
           const response = await fetch('/api/calculate-price', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              base_price: foundHotel.pricing.basePrice,
+              base_price: hotel.pricing.basePrice,
               day_of_week: currentDay,
               hotel: ml.hotel,
               season: ml.season,
@@ -59,13 +58,13 @@ const BookingConfirmation = () => {
               market_segment: ml.market_segment,
               lead_time: ml.lead_time,
               duration_days: durationDays,
-            }),
+            })
           });
-          
+
           if (!response.ok) {
             throw new Error(`Server returned ${response.status}`);
           }
-          
+
           const data = await response.json();
           setPricingData(data);
           setLoading(false);
@@ -74,14 +73,14 @@ const BookingConfirmation = () => {
           setLoading(false);
         }
       };
-      
+
       fetchPrice();
     }
-  }, [id, durationDays]);
+  }, [id, hotel, durationDays]);
 
   if (!hotel) {
     return (
-      <div className="container" style={{paddingTop: '100px'}}>
+      <div className="container" style={{ paddingTop: '100px' }}>
         <h2>Loading...</h2>
       </div>
     );
@@ -133,6 +132,10 @@ const BookingConfirmation = () => {
                 <CreditCard size={20} />
                 <span>Credit or debit card</span>
               </div>
+              <div className="payment-card">
+                <Smartphone size={20} />
+                <span>UPI</span>
+              </div>
             </div>
 
             <hr className="divider" />
@@ -166,20 +169,20 @@ const BookingConfirmation = () => {
               ) : pricingData && (
                 <div className="pricing-results">
                   <div className="demand-level-container">
-                    <span className="demand-label"><Activity size={16}/> Current Demand Level:</span>
+                    <span className="demand-label"><Activity size={16} /> Current Demand Level:</span>
                     <span className={`demand-badge badge-${pricingData.predicted_demand.toLowerCase()}`}>
                       {pricingData.predicted_demand}
                     </span>
                   </div>
 
                   <h3 className="price-details-title">Price Breakdown</h3>
-                  
+
                   <div className="price-breakdown-list">
                     <div className="breakdown-item base-item">
                       <span>Base Price</span>
                       <span>{currency}{pricingData.base_price.toFixed(2)}</span>
                     </div>
-                    
+
                     {pricingData.applied_rules.map((rule, idx) => (
                       <div key={idx} className="breakdown-item rule-item">
                         <span>{rule}</span>
@@ -195,7 +198,7 @@ const BookingConfirmation = () => {
                   </div>
 
                   <div className="explanation-box">
-                    <h4><Info size={16}/> Why this price?</h4>
+                    <h4><Info size={16} /> Why this price?</h4>
                     <p>{pricingData.explanation}</p>
                   </div>
                 </div>
