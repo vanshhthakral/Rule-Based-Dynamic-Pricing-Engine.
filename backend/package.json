@@ -1,0 +1,7 @@
+{
+  "name": "pricing-backend",
+  "private": true,
+  "scripts": {
+    "start": "python -u app.py"
+  }
+}

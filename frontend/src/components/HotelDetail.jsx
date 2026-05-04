@@ -8,6 +8,15 @@ const HotelDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [hotel, setHotel] = useState(null);
+  const [checkInDate, setCheckInDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  });
+  const [checkOutDate, setCheckOutDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  });
 
   useEffect(() => {
     const foundHotel = mockHotels.find(h => h.id === id);
@@ -34,6 +43,14 @@ const HotelDetail = () => {
   const isDiscounted = currentPrice < basePrice;
   const isSurged = currentPrice > basePrice;
   const percentDiff = Math.round(Math.abs((currentPrice - basePrice) / basePrice * 100));
+  const onReserve = () => {
+    navigate(`/reserve/${id}`, {
+      state: {
+        checkInDate,
+        checkOutDate,
+      },
+    });
+  };
 
   return (
     <div className="hotel-detail-page">
@@ -127,17 +144,43 @@ const HotelDetail = () => {
               <div className="booking-dates">
                 <div className="date-input">
                   <label>Check-in</label>
-                  <input type="date" />
+                  <input
+                    type="date"
+                    value={checkInDate}
+                    onChange={(e) => {
+                      const nextIn = e.target.value;
+                      setCheckInDate(nextIn);
+                      if (new Date(checkOutDate) <= new Date(nextIn)) {
+                        const d = new Date(nextIn);
+                        d.setDate(d.getDate() + 1);
+                        setCheckOutDate(d.toISOString().split('T')[0]);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="date-input">
                   <label>Check-out</label>
-                  <input type="date" />
+                  <input
+                    type="date"
+                    value={checkOutDate}
+                    min={checkInDate}
+                    onChange={(e) => {
+                      const nextOut = e.target.value;
+                      if (new Date(nextOut) <= new Date(checkInDate)) {
+                        const d = new Date(checkInDate);
+                        d.setDate(d.getDate() + 1);
+                        setCheckOutDate(d.toISOString().split('T')[0]);
+                      } else {
+                        setCheckOutDate(nextOut);
+                      }
+                    }}
+                  />
                 </div>
               </div>
               
               <button 
                 className="btn btn-primary btn-block reserve-btn"
-                onClick={() => navigate(`/reserve/${id}`)}
+                onClick={onReserve}
               >
                 Reserve Now
               </button>

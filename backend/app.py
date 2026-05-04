@@ -1,37 +1,56 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
 from demand_model import predict_demand
-import math
 
 app = Flask(__name__)
 CORS(app)
+
 
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
         "message": "Dynamic Pricing Engine Backend is running!",
-        "endpoints": ["/api/health", "/api/calculate-price"]
+        "endpoints": ["/api/health", "/api/calculate-price"],
     }), 200
+
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "healthy", "service": "pricing-engine"}), 200
 
+
 @app.route("/api/calculate-price", methods=["POST"])
 def calculate_price():
     try:
-        data = request.json
-        hour = int(data.get("hour"))
-        day_of_week = data.get("day_of_week")
+        data = request.json or {}
         base_price = float(data.get("base_price"))
-        
-        # 1. Predict Demand using ML Model
-        predicted_demand = predict_demand(hour, day_of_week)
-        
-        # 2. Rule Engine
+        duration_days = int(data.get("duration_days", 1))
+        if duration_days < 1:
+            raise ValueError("duration_days must be at least 1")
+        day_of_week = data.get("day_of_week")
+        hotel = data.get("hotel", "City Hotel")
+        season = data.get("season", "normal")
+        adults = int(data.get("adults", 2))
+        children = int(data.get("children", 0))
+        babies = int(data.get("babies", 0))
+        market_segment = data.get("market_segment", "Online TA")
+        lead_time = int(data.get("lead_time", 21))
+
+        predicted_demand = predict_demand(
+            day_of_week=day_of_week,
+            hotel=hotel,
+            season=season,
+            adults=adults,
+            children=children,
+            babies=babies,
+            market_segment=market_segment,
+            lead_time=lead_time,
+        )
+
         price = base_price
         applied_rules = []
-        
+
         if predicted_demand == "HIGH":
             price *= 1.20
             applied_rules.append("High demand +20%")
@@ -41,54 +60,52 @@ def calculate_price():
         elif predicted_demand == "LOW":
             price *= 0.90
             applied_rules.append("Low demand -10%")
-            
-        # Check for weekend
+
         if day_of_week in ["Saturday", "Sunday"]:
             price *= 1.10
             applied_rules.append("Weekend +10%")
-            
-        # 3. Fairness Cap
+
         max_price = 1.5 * base_price
         capped = False
-        
         if price > max_price:
             price = max_price
             capped = True
-            applied_rules.append(f"Fairness cap applied (Max 1.5x)")
-            
+            applied_rules.append("Fairness cap applied (Max 1.5x)")
+
         final_price = round(price, 2)
-        
-        # 4. Construct Human Readable Explanation
+        total_price = round(final_price * duration_days, 2)
+
         explanation_parts = []
         if predicted_demand == "HIGH":
             explanation_parts.append("high demand")
         elif predicted_demand == "LOW":
             explanation_parts.append("low demand")
-            
         if day_of_week in ["Saturday", "Sunday"]:
             explanation_parts.append("weekend booking")
-            
+
         if explanation_parts:
             explanation = f"Price adjusted due to {' and '.join(explanation_parts)}."
         else:
             explanation = "Price adjusted based on normal demand factors."
-            
         if capped:
             explanation += " Fairness cap applied to prevent excessive pricing."
-            
-        # 5. Return Detailed Response
-        response = {
+        if duration_days > 1:
+            explanation += f" Total reflects {duration_days} days at the calculated daily rate."
+
+        return jsonify({
             "base_price": base_price,
+            "duration_days": duration_days,
             "predicted_demand": predicted_demand,
             "applied_rules": applied_rules,
-            "final_price": final_price,
-            "explanation": explanation
-        }
-        
-        return jsonify(response)
-        
+            "final_price": final_price,  # daily dynamic rate (kept for backward compatibility)
+            "daily_rate": final_price,
+            "total_price": total_price,
+            "explanation": explanation,
+        })
+
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=True, host="127.0.0.1", port=5001)

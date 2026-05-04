@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { mockHotels } from '../data/mockHotels';
 import { ArrowLeft, CreditCard, Sparkles, Info, Activity } from 'lucide-react';
 import './BookingConfirmation.css';
@@ -7,11 +7,30 @@ import './BookingConfirmation.css';
 const BookingConfirmation = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
+  const routeState = routeLocation.state || {};
   const [hotel, setHotel] = useState(null);
+  const [checkInDate, setCheckInDate] = useState(() => {
+    if (routeState.checkInDate) return routeState.checkInDate;
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  });
+  const [checkOutDate, setCheckOutDate] = useState(() => {
+    if (routeState.checkOutDate) return routeState.checkOutDate;
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  });
   
   const [pricingData, setPricingData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const durationDays = (() => {
+    const inDate = new Date(checkInDate);
+    const outDate = new Date(checkOutDate);
+    const diff = Math.ceil((outDate - inDate) / (1000 * 60 * 60 * 24));
+    return Number.isFinite(diff) && diff > 0 ? diff : 1;
+  })();
 
   useEffect(() => {
     const foundHotel = mockHotels.find(h => h.id === id);
@@ -23,17 +42,24 @@ const BookingConfirmation = () => {
         try {
           // Use current real-world time for dynamic inputs
           const now = new Date();
-          const currentHour = now.getHours();
           const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
           
+          const ml = foundHotel.ml;
           const response = await fetch('/api/calculate-price', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              hour: currentHour,
+              base_price: foundHotel.pricing.basePrice,
               day_of_week: currentDay,
-              base_price: foundHotel.pricing.basePrice
-            })
+              hotel: ml.hotel,
+              season: ml.season,
+              adults: ml.adults,
+              children: ml.children,
+              babies: ml.babies,
+              market_segment: ml.market_segment,
+              lead_time: ml.lead_time,
+              duration_days: durationDays,
+            }),
           });
           
           if (!response.ok) {
@@ -51,7 +77,7 @@ const BookingConfirmation = () => {
       
       fetchPrice();
     }
-  }, [id]);
+  }, [id, durationDays]);
 
   if (!hotel) {
     return (
@@ -87,11 +113,15 @@ const BookingConfirmation = () => {
             <div className="trip-details">
               <div className="trip-item">
                 <strong>Dates</strong>
-                <span>Today - Tomorrow</span>
+                <span>{checkInDate} - {checkOutDate}</span>
               </div>
               <div className="trip-item">
                 <strong>Guests</strong>
                 <span>2 guests</span>
+              </div>
+              <div className="trip-item">
+                <strong>Duration</strong>
+                <span>{durationDays} day(s)</span>
               </div>
             </div>
 
@@ -160,8 +190,8 @@ const BookingConfirmation = () => {
                   <hr className="divider" />
 
                   <div className="total-row">
-                    <span>Total (INR)</span>
-                    <span className="final-highlight-price">{currency}{pricingData.final_price.toFixed(2)}</span>
+                    <span>Total ({pricingData.duration_days || durationDays} day(s))</span>
+                    <span className="final-highlight-price">{currency}{(pricingData.total_price ?? pricingData.final_price).toFixed(2)}</span>
                   </div>
 
                   <div className="explanation-box">

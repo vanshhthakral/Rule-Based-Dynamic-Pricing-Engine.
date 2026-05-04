@@ -131,6 +131,14 @@ const exactHotels = [
   }
 ];
 
+/** Matches Kaggle Hotel Booking Demand `market_segment` values for ML API. */
+const ML_MARKET_SEGMENTS = [
+  'Direct', 'Online TA', 'Offline TA/TO', 'Groups', 'Corporate',
+  'Complementary', 'Undefined', 'Aviation',
+];
+
+const kaggleHotelType = (category) => (category === 'Mountains' ? 'Resort Hotel' : 'City Hotel');
+
 const generateHotels = () => {
   const hotels = [];
   let idCounter = 1;
@@ -139,6 +147,7 @@ const generateHotels = () => {
     // Generate an array of image paths
     const imagesArray = Array.from({ length: h.imageCount }, (_, i) => `${h.imagePrefix}${i + 1}.png`);
     
+    const season = Math.random() > 0.5 ? 'peak' : (Math.random() > 0.5 ? 'normal' : 'off');
     hotels.push({
       id: `h${idCounter}`,
       name: h.name,
@@ -153,11 +162,20 @@ const generateHotels = () => {
         basePrice: Math.floor(Math.random() * 60) * 100 + 4000,
         currency: '₹',
         dynamicFactors: {
-          season: Math.random() > 0.5 ? 'peak' : (Math.random() > 0.5 ? 'normal' : 'off'),
+          season,
           checkin_day: Math.random() > 0.7 ? 'weekend' : 'weekday',
           tourist_level: Math.random() > 0.6 ? 'high' : (Math.random() > 0.5 ? 'medium' : 'low')
         }
-      }
+      },
+      ml: {
+        hotel: kaggleHotelType(h.category),
+        season,
+        market_segment: ML_MARKET_SEGMENTS[idCounter % ML_MARKET_SEGMENTS.length],
+        adults: 2,
+        children: idCounter % 4 === 0 ? 1 : 0,
+        babies: 0,
+        lead_time: 8 + (idCounter % 40),
+      },
     });
     idCounter++;
   });
