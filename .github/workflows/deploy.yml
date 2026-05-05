@@ -35,8 +35,12 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            if [ ! -d "~/Rule-Based-Dynamic-Pricing-Engine" ]; then
+              git clone https://github.com/dimple2001/Rule-Based-Dynamic-Pricing-Engine.git ~/Rule-Based-Dynamic-Pricing-Engine
+            fi
             cd ~/Rule-Based-Dynamic-Pricing-Engine
-            git pull origin main
-            docker-compose down
-            docker-compose up -d --build
+            git fetch --all
+            git reset --hard origin/main
+            sudo docker-compose down || true
+            sudo docker-compose up -d --build
             echo "Deployment successful!"
