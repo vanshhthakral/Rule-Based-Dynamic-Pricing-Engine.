@@ -190,9 +190,16 @@ const BookingConfirmation = () => {
 
                   <div className="price-breakdown-list">
                     <div className="breakdown-item base-item">
-                      <span>Base Price</span>
+                      <span>Base Price (per night)</span>
                       <span>{currency}{pricingData.base_price.toFixed(2)}</span>
                     </div>
+
+                    {(pricingData.duration_days || durationDays) > 1 && (
+                      <div className="breakdown-item stay-duration-item">
+                        <span>Stay Duration</span>
+                        <span>{currency}{pricingData.base_price.toFixed(2)} * {(pricingData.duration_days || durationDays)} days</span>
+                      </div>
+                    )}
 
                     {pricingData.applied_rules.map((rule, idx) => (
                       <div key={idx} className="breakdown-item rule-item">

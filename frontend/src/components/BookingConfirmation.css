@@ -249,6 +249,15 @@
   font-weight: 500;
 }
 
+.stay-duration-item {
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.stay-duration-item span:last-child {
+  color: var(--text-main);
+}
+
 .total-row {
   display: flex;
   justify-content: space-between;
