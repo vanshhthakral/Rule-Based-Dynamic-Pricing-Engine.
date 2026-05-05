@@ -50,8 +50,17 @@ def calculate_price():
             lead_time=lead_time,
         )
 
+        is_new_user = data.get("is_new_user", False)
+        print(f"DEBUG: Calculating price. Is New User: {is_new_user}")
+
         price = base_price
         applied_rules = []
+
+        # New user relaxation (3-5%) - implementing 5%
+        # Applying this first as requested to ensure it's reduced in the core price
+        if is_new_user:
+            price *= 0.95
+            applied_rules.append("New User Welcome Discount -5%")
 
         if predicted_demand == "HIGH":
             price *= 1.20
@@ -78,6 +87,8 @@ def calculate_price():
         total_price = round(final_price * duration_days, 2)
 
         explanation_parts = []
+        if is_new_user:
+            explanation_parts.append("new user welcome offer")
         if predicted_demand == "HIGH":
             explanation_parts.append("high demand")
         elif predicted_demand == "LOW":
@@ -99,7 +110,7 @@ def calculate_price():
             "duration_days": duration_days,
             "predicted_demand": predicted_demand,
             "applied_rules": applied_rules,
-            "final_price": final_price,  # daily dynamic rate (kept for backward compatibility)
+            "final_price": final_price,
             "daily_rate": final_price,
             "total_price": total_price,
             "explanation": explanation,

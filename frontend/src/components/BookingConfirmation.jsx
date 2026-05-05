@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { mockHotels } from '../data/mockHotels';
 import { ArrowLeft, CreditCard, Smartphone, Sparkles, Info, Activity } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
 import './BookingConfirmation.css';
 
 const BookingConfirmation = () => {
@@ -9,6 +10,8 @@ const BookingConfirmation = () => {
   const navigate = useNavigate();
   const routeLocation = useLocation();
   const routeState = routeLocation.state || {};
+  
+  const { user } = useContext(AuthContext);
   
   const hotel = mockHotels.find(h => h.id === id);
 
@@ -44,6 +47,18 @@ const BookingConfirmation = () => {
         try {
           const currentDay = new Date(checkInDate).toLocaleDateString('en-US', { weekday: 'long' });
 
+          // Determine if user is new (created within last 24 hours)
+          let isNewUser = false;
+          console.log("Current user in BookingConfirmation:", user);
+          if (user && user.createdAt) {
+            const createdDate = new Date(user.createdAt);
+            const now = new Date();
+            const diffHours = (now - createdDate) / (1000 * 60 * 60);
+            console.log(`User created at: ${user.createdAt}, Hours ago: ${diffHours.toFixed(2)}`);
+            isNewUser = diffHours < 24;
+          }
+          console.log("Calculated isNewUser flag:", isNewUser);
+
           const ml = hotel.ml;
           const payload = {
             base_price: hotel.pricing.basePrice,
@@ -56,6 +71,7 @@ const BookingConfirmation = () => {
             market_segment: ml.market_segment,
             lead_time: ml.lead_time,
             duration_days: durationDays,
+            is_new_user: isNewUser
           };
 
           let lastErr = null;
@@ -87,7 +103,7 @@ const BookingConfirmation = () => {
 
       fetchPrice();
     }
-  }, [id, hotel, durationDays, checkInDate, routeState.pricingQuote]);
+  }, [id, hotel, durationDays, checkInDate, routeState.pricingQuote, user]);
 
   if (!hotel) {
     return (
