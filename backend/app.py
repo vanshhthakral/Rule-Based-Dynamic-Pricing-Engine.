@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from demand_model import predict_demand
+from demand_model import predict_demand, predict_demand_batch
 
 app = Flask(__name__)
 CORS(app)
@@ -107,5 +107,62 @@ def calculate_price():
         return jsonify({"error": str(e)}), 400
 
 
+@app.route("/api/calculate-prices-batch", methods=["POST"])
+def calculate_prices_batch():
+    try:
+        data = request.json
+        if not isinstance(data, list):
+            raise ValueError("Input must be a JSON array of hotel objects.")
+
+        if not data:
+            return jsonify({}), 200
+
+        # Extract features for batch prediction
+        features_list = []
+        for item in data:
+            features = item.get("features", {})
+            features_list.append(features)
+
+        # Batch predict demand
+        predicted_demands = predict_demand_batch(features_list)
+
+        results = {}
+        for idx, item in enumerate(data):
+            hotel_id = item.get("hotel_id")
+            if hotel_id is None:
+                continue
+
+            features = item.get("features", {})
+            base_price = float(features.get("base_price", 0))
+            duration_days = int(features.get("duration_days", 1))
+            day_of_week = features.get("day_of_week")
+
+            predicted_demand = predicted_demands[idx]
+
+            price = base_price
+            if predicted_demand == "HIGH":
+                price *= 1.20
+            elif predicted_demand == "MEDIUM":
+                price *= 1.10
+            elif predicted_demand == "LOW":
+                price *= 0.90
+
+            if day_of_week in ["Saturday", "Sunday"]:
+                price *= 1.10
+
+            max_price = 1.5 * base_price
+            if price > max_price:
+                price = max_price
+
+            final_price = round(price, 2)
+            results[str(hotel_id)] = final_price
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=5001)
+    app.run(debug=True, host="0.0.0.0", port=5001)

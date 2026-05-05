@@ -12,12 +12,12 @@ const seedData = async () => {
 
     // Skip clearing existing reviews to preserve user-added data
     // await Review.deleteMany({});
-    
+
     // Create a dummy user if not exists
     let user = await User.findOne({ email: 'admin@aureva.com' });
     if (!user) {
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('password123', salt);
+      const hashedPassword = await bcrypt.hash('admin123', salt);
       user = await User.create({
         name: 'Admin User',
         email: 'admin@aureva.com',
@@ -27,8 +27,11 @@ const seedData = async () => {
       console.log('Dummy user created');
     } else {
       user.role = 'admin';
+      // Also update password to ensure it works if changed
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash('admin123', salt);
       await user.save();
-      console.log('Existing admin user updated with admin role');
+      console.log('Existing admin user updated with admin role and password admin123');
     }
 
     const reviews = [

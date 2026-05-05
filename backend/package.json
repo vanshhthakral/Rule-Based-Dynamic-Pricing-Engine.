@@ -2,12 +2,13 @@
   "name": "pricing-backend",
   "private": true,
   "scripts": {
-    "start": "python -u app.py"
+    "start": "node server.js",
+    "start:flask": "python3 app.py"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
+    "dotenv": "^16.4.5",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.1"
