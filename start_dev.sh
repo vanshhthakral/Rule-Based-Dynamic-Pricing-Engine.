@@ -22,7 +22,7 @@ sleep 2
 echo "================================================"
 echo " Installing Node dependencies..."
 echo "================================================"
-cd "$ROOT_DIR/backend"
+cd "$ROOT_DIR/backend/node"
 npm install --save dotenv@16.4.5 2>/dev/null || npm install
 
 echo "================================================"
@@ -34,7 +34,7 @@ sleep 1
 echo "================================================"
 echo " Starting Flask Backend (Port 5001)..."
 echo "================================================"
-python3 "$ROOT_DIR/backend/app.py" > "$ROOT_DIR/backend/flask_server.log" 2>&1 &
+python3 "$ROOT_DIR/backend/flask/app.py" > "$ROOT_DIR/backend/flask_server.log" 2>&1 &
 sleep 1
 
 echo ""

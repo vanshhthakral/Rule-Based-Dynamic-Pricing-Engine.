@@ -12,8 +12,8 @@ services:
   # Python Pricing Engine (Flask)
   flask-backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.flask
+      context: ./backend/flask
+      dockerfile: Dockerfile
     container_name: flask-backend
     ports:
       - "5001:5001"
@@ -26,8 +26,8 @@ services:
   # Node.js Auth/Reviews API (Express)
   node-backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.node
+      context: ./backend/node
+      dockerfile: Dockerfile
     container_name: node-backend
     ports:
       - "5002:5002"
