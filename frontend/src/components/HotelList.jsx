@@ -1,15 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import HotelCard from './HotelCard';
-import { mockHotels, calculatePrice } from '../data/mockHotels';
+import { mockHotels } from '../data/mockHotels';
 import './HotelList.css';
 
 const HotelList = ({ searchLocation }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('recommended');
+  const [quotesById, setQuotesById] = useState({});
 
   const categories = ['All', 'Mountains', 'City'];
 
-  const processedHotels = useMemo(() => {
+  const filteredHotels = useMemo(() => {
     let result = mockHotels;
 
     // 1. Filter by Search Location
@@ -25,21 +26,77 @@ const HotelList = ({ searchLocation }) => {
       result = result.filter(hotel => hotel.category === activeCategory);
     }
 
+    return result;
+  }, [searchLocation, activeCategory]);
+
+  useEffect(() => {
+    if (filteredHotels.length === 0) return;
+    let cancelled = false;
+
+    const fetchQuotes = async () => {
+      const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      const results = await Promise.all(
+        filteredHotels.map(async (hotel) => {
+          try {
+            const ml = hotel.ml;
+            const response = await fetch('/api/calculate-price', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                base_price: hotel.pricing.basePrice,
+                day_of_week: dayOfWeek,
+                hotel: ml.hotel,
+                season: ml.season,
+                adults: ml.adults,
+                children: ml.children,
+                babies: ml.babies,
+                market_segment: ml.market_segment,
+                lead_time: ml.lead_time,
+                duration_days: 1,
+              }),
+            });
+            if (!response.ok) throw new Error(`Server returned ${response.status}`);
+            return [hotel.id, await response.json()];
+          } catch (_e) {
+            return [hotel.id, null];
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setQuotesById((prev) => {
+          const next = { ...prev };
+          for (const [id, quote] of results) {
+            next[id] = quote;
+          }
+          return next;
+        });
+      }
+    };
+
+    fetchQuotes();
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredHotels]);
+
+  const processedHotels = useMemo(() => {
     // 3. Pre-calculate prices for sorting
-    const hotelsWithPrice = result.map(hotel => {
-      const { finalPrice } = calculatePrice(hotel.pricing.basePrice, hotel.pricing.dynamicFactors);
-      return { ...hotel, computedPrice: finalPrice };
+    const hotelsWithPrice = filteredHotels.map(hotel => {
+      const liveQuote = quotesById[hotel.id];
+      const computedPrice = liveQuote?.daily_rate ?? liveQuote?.final_price ?? null;
+      return { ...hotel, liveQuote, computedPrice };
     });
 
     // 4. Sort
     if (sortBy === 'price-low') {
-      hotelsWithPrice.sort((a, b) => a.computedPrice - b.computedPrice);
+      hotelsWithPrice.sort((a, b) => (a.computedPrice ?? Number.MAX_SAFE_INTEGER) - (b.computedPrice ?? Number.MAX_SAFE_INTEGER));
     } else if (sortBy === 'price-high') {
-      hotelsWithPrice.sort((a, b) => b.computedPrice - a.computedPrice);
+      hotelsWithPrice.sort((a, b) => (b.computedPrice ?? 0) - (a.computedPrice ?? 0));
     }
 
     return hotelsWithPrice;
-  }, [searchLocation, activeCategory, sortBy]);
+  }, [filteredHotels, quotesById, sortBy]);
 
   return (
     <section className="hotel-list-section">

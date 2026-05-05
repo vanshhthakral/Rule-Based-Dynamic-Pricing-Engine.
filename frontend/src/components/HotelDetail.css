@@ -204,6 +204,37 @@
   align-items: flex-end;
 }
 
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid transparent;
+}
+
+.badge-high {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.badge-medium {
+  background-color: #fef3c7;
+  color: #d97706;
+  border-color: #fde68a;
+}
+
+.badge-low {
+  background-color: #d1fae5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
 .dynamic-pricing-insight {
   background-color: var(--primary-light);
   padding: 1.25rem;

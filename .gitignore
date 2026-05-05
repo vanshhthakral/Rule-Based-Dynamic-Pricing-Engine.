@@ -12,8 +12,7 @@ venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-hotel_bookings.csv
-model.pkl
+*.pkl
 
 # IDEs
 .vscode/

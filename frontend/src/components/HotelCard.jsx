@@ -1,20 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, MapPin, TrendingUp, TrendingDown, Info } from 'lucide-react';
-import { calculatePrice } from '../data/mockHotels';
 import './HotelCard.css';
 
 const HotelCard = ({ hotel }) => {
   const navigate = useNavigate();
   const { id, name, location, rating, reviews, image, amenities, pricing } = hotel;
   const { basePrice, currency, dynamicFactors } = pricing;
-  
-  const { finalPrice } = calculatePrice(basePrice, dynamicFactors);
-  const currentPrice = finalPrice;
+  const liveQuote = hotel.liveQuote;
+  const currentPrice = liveQuote?.daily_rate ?? liveQuote?.final_price ?? hotel.computedPrice;
+  const hasQuote = Number.isFinite(currentPrice);
+  const demandLevel = String(liveQuote?.predicted_demand || '').toLowerCase();
 
-  const isDiscounted = currentPrice < basePrice;
-  const isSurged = currentPrice > basePrice;
-  const percentDiff = Math.round(Math.abs((currentPrice - basePrice) / basePrice * 100));
+  const isDiscounted = hasQuote && currentPrice < basePrice;
+  const isSurged = hasQuote && currentPrice > basePrice;
+  const percentDiff = hasQuote ? Math.round(Math.abs((currentPrice - basePrice) / basePrice * 100)) : 0;
 
   const handleClick = () => {
     navigate(`/hotel/${id}`);
@@ -30,9 +30,9 @@ const HotelCard = ({ hotel }) => {
               <TrendingDown size={14} /> {percentDiff}% OFF
             </span>
           )}
-          {isSurged && (
-            <span className="badge badge-surge">
-              <TrendingUp size={14} /> High Demand
+          {isSurged && demandLevel && (
+            <span className={`badge badge-demand badge-${demandLevel}`}>
+              <TrendingUp size={14} /> {demandLevel.toUpperCase()} Demand
             </span>
           )}
         </div>
@@ -64,20 +64,20 @@ const HotelCard = ({ hotel }) => {
         <div className="hotel-footer">
           <div className="pricing-info">
             <div className="price-container">
-              <span className={`current-price ${isDiscounted ? 'text-discount' : isSurged ? 'text-surge' : ''}`}>
-                {currency}{currentPrice}
+              <span className={`current-price ${demandLevel === 'high' ? 'text-high' : demandLevel === 'medium' ? 'text-medium' : demandLevel === 'low' ? 'text-low' : ''}`}>
+                {hasQuote ? `${currency}${currentPrice}` : '...'}
               </span>
               <span className="price-period">/ night</span>
             </div>
             
-            {(isSurged || isDiscounted) && (
+            {hasQuote && (isSurged || isDiscounted) && (
               <div className="dynamic-insight tooltip-trigger" onClick={(e) => e.stopPropagation()}>
                 <Info size={14} />
                 <span className="insight-text">
                   Dynamic pricing active
                 </span>
                 <div className="tooltip">
-                  <strong>Demand:</strong> {dynamicFactors.tourist_level}<br/>
+                  <strong>Demand:</strong> {demandLevel || dynamicFactors.tourist_level}<br/>
                   <strong>Season:</strong> {dynamicFactors.season}
                 </div>
               </div>

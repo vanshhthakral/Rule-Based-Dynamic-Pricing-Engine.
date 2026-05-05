@@ -36,38 +36,49 @@ const BookingConfirmation = () => {
 
   useEffect(() => {
     if (hotel) {
-      // Fetch dynamic price from Flask ML API
+      if (routeState.pricingQuote) {
+        setPricingData(routeState.pricingQuote);
+        setLoading(false);
+      }
       const fetchPrice = async () => {
         try {
-          // Use current real-world time for dynamic inputs
-          const now = new Date();
-          const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
+          const currentDay = new Date(checkInDate).toLocaleDateString('en-US', { weekday: 'long' });
+
           const ml = hotel.ml;
+          const payload = {
+            base_price: hotel.pricing.basePrice,
+            day_of_week: currentDay,
+            hotel: ml.hotel,
+            season: ml.season,
+            adults: ml.adults,
+            children: ml.children,
+            babies: ml.babies,
+            market_segment: ml.market_segment,
+            lead_time: ml.lead_time,
+            duration_days: durationDays,
+          };
 
-          const response = await fetch('/api/calculate-price', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              base_price: hotel.pricing.basePrice,
-              day_of_week: currentDay,
-              hotel: ml.hotel,
-              season: ml.season,
-              adults: ml.adults,
-              children: ml.children,
-              babies: ml.babies,
-              market_segment: ml.market_segment,
-              lead_time: ml.lead_time,
-              duration_days: durationDays,
-            })
-          });
+          let lastErr = null;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const response = await fetch('/api/calculate-price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
 
-          if (!response.ok) {
-            throw new Error(`Server returned ${response.status}`);
+              if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+              }
+              const data = await response.json();
+              setPricingData(data);
+              setLoading(false);
+              return;
+            } catch (e) {
+              lastErr = e;
+            }
           }
-
-          const data = await response.json();
-          setPricingData(data);
-          setLoading(false);
+          throw lastErr || new Error('Unable to fetch quote');
         } catch (err) {
           setError(err.message);
           setLoading(false);
@@ -76,7 +87,7 @@ const BookingConfirmation = () => {
 
       fetchPrice();
     }
-  }, [id, hotel, durationDays]);
+  }, [id, hotel, durationDays, checkInDate, routeState.pricingQuote]);
 
   if (!hotel) {
     return (

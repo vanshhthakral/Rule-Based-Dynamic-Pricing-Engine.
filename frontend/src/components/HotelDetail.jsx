@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockHotels, calculatePrice } from '../data/mockHotels';
+import { mockHotels } from '../data/mockHotels';
 import { ArrowLeft, Star, MapPin, Check, TrendingUp, TrendingDown, Clock, ShieldCheck, Heart } from 'lucide-react';
 import ReviewSection from './ReviewSection';
 import './HotelDetail.css';
@@ -9,6 +9,9 @@ const HotelDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [hotel, setHotel] = useState(null);
+  const [quoteData, setQuoteData] = useState(null);
+  const [quoteLoading, setQuoteLoading] = useState(true);
+  const [quoteError, setQuoteError] = useState(null);
   const [checkInDate, setCheckInDate] = useState(() => {
     const d = new Date();
     return d.toISOString().split('T')[0];
@@ -24,6 +27,60 @@ const HotelDetail = () => {
     setHotel(foundHotel);
   }, [id]);
 
+  const durationDays = (() => {
+    const inDate = new Date(checkInDate);
+    const outDate = new Date(checkOutDate);
+    const diff = Math.ceil((outDate - inDate) / (1000 * 60 * 60 * 24));
+    return Number.isFinite(diff) && diff > 0 ? diff : 1;
+  })();
+
+  useEffect(() => {
+    if (!hotel) return;
+
+    const fetchQuote = async () => {
+      setQuoteLoading(true);
+      setQuoteError(null);
+      const ml = hotel.ml;
+      const dayOfWeek = new Date(checkInDate).toLocaleDateString('en-US', { weekday: 'long' });
+      const payload = {
+        base_price: hotel.pricing.basePrice,
+        day_of_week: dayOfWeek,
+        hotel: ml.hotel,
+        season: ml.season,
+        adults: ml.adults,
+        children: ml.children,
+        babies: ml.babies,
+        market_segment: ml.market_segment,
+        lead_time: ml.lead_time,
+        duration_days: durationDays,
+      };
+
+      let lastErr = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await fetch('/api/calculate-price', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            throw new Error(`Server returned ${response.status}`);
+          }
+          const data = await response.json();
+          setQuoteData(data);
+          setQuoteLoading(false);
+          return;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      setQuoteError(lastErr ? lastErr.message : 'Unable to fetch quote');
+      setQuoteLoading(false);
+    };
+
+    fetchQuote();
+  }, [hotel, checkInDate, checkOutDate, durationDays]);
+
   if (!hotel) {
     return (
       <div className="hotel-detail-loading">
@@ -37,18 +94,21 @@ const HotelDetail = () => {
 
   const { name, location, rating, reviews, image, amenities, pricing, category } = hotel;
   const { basePrice, currency, dynamicFactors } = pricing;
-  
-  const { finalPrice } = calculatePrice(basePrice, dynamicFactors);
-  const currentPrice = finalPrice;
-
-  const isDiscounted = currentPrice < basePrice;
-  const isSurged = currentPrice > basePrice;
-  const percentDiff = Math.round(Math.abs((currentPrice - basePrice) / basePrice * 100));
+  const currentPrice = quoteData?.daily_rate ?? quoteData?.final_price;
+  const hasQuote = Number.isFinite(currentPrice);
+  const shownDemand = quoteData?.predicted_demand;
+  const demandLevel = String(shownDemand || 'medium').toLowerCase();
+  const checkInDayLabel = new Date(checkInDate).toLocaleDateString('en-US', { weekday: 'long' });
+  const isDiscounted = hasQuote && currentPrice < basePrice;
+  const isSurged = hasQuote && currentPrice > basePrice;
+  const percentDiff = hasQuote ? Math.round(Math.abs((currentPrice - basePrice) / basePrice * 100)) : 0;
   const onReserve = () => {
+    if (!quoteData) return;
     navigate(`/reserve/${id}`, {
       state: {
         checkInDate,
         checkOutDate,
+        pricingQuote: quoteData,
       },
     });
   };
@@ -116,7 +176,7 @@ const HotelDetail = () => {
                     <span className="old-price">{currency}{basePrice}</span>
                   ) : null}
                   <span className={`new-price ${isDiscounted ? 'text-discount' : isSurged ? 'text-surge' : ''}`}>
-                    {currency}{currentPrice}
+                    {hasQuote ? `${currency}${currentPrice}` : '...'}
                   </span>
                   <span className="per-night">/ night</span>
                 </div>
@@ -127,9 +187,9 @@ const HotelDetail = () => {
                       <TrendingDown size={14} /> {percentDiff}% OFF
                     </span>
                   )}
-                  {isSurged && (
-                    <span className="badge badge-surge">
-                      <TrendingUp size={14} /> High Demand
+                  {isSurged && shownDemand && (
+                    <span className={`badge badge-demand badge-${demandLevel}`}>
+                      <TrendingUp size={14} /> {demandLevel.toUpperCase()} Demand
                     </span>
                   )}
                 </div>
@@ -139,10 +199,16 @@ const HotelDetail = () => {
                 <h4>Pricing Insight</h4>
                 <ul>
                   <li><Clock size={14}/> <strong>Season:</strong> {dynamicFactors.season}</li>
-                  <li><TrendingUp size={14}/> <strong>Demand Level:</strong> {dynamicFactors.tourist_level}</li>
-                  <li><ShieldCheck size={14}/> <strong>Check-in Day:</strong> {dynamicFactors.checkin_day}</li>
+                  <li><TrendingUp size={14}/> <strong>Demand Level:</strong> {shownDemand ? String(shownDemand).toLowerCase() : 'loading...'}</li>
+                  <li><ShieldCheck size={14}/> <strong>Check-in Day:</strong> {checkInDayLabel}</li>
                 </ul>
               </div>
+              {quoteLoading ? (
+                <p className="no-charge-text">Fetching live quote...</p>
+              ) : null}
+              {quoteError ? (
+                <p className="no-charge-text" style={{ color: '#ef4444' }}>Live quote unavailable: {quoteError}</p>
+              ) : null}
 
               <div className="booking-dates">
                 <div className="date-input">
@@ -184,6 +250,7 @@ const HotelDetail = () => {
               <button 
                 className="btn btn-primary btn-block reserve-btn"
                 onClick={onReserve}
+                disabled={!quoteData || quoteLoading}
               >
                 Reserve Now
               </button>
