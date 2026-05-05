@@ -7,15 +7,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/auth': {
-        target: 'http://127.0.0.1:3001',
+        target: 'http://localhost:5002',
         changeOrigin: true
       },
       '/api/reviews': {
-        target: 'http://127.0.0.1:3001',
+        target: 'http://localhost:5002',
         changeOrigin: true
       },
       '/api/calculate-price': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://localhost:5001',
         changeOrigin: true
       }
     }

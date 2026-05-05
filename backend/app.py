@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from datetime import datetime
+
 
 from demand_model import predict_demand, predict_demand_batch
 
@@ -155,9 +157,13 @@ def calculate_prices_batch():
                 price = max_price
 
             final_price = round(price, 2)
-            results[str(hotel_id)] = final_price
+            results[str(hotel_id)] = {
+                "final_price": final_price,
+                "predicted_demand": predicted_demand
+            }
 
         return jsonify(results), 200
+
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400

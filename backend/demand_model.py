@@ -233,3 +233,6 @@ if __name__ == "__main__":
             "Saturday", "Resort Hotel", "peak", 2, 0, 0, "Online TA", 14,
         )
     )
+else:
+    # Eagerly load the model when the module is imported by the Flask app
+    load_model()

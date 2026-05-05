@@ -15,7 +15,7 @@ const HotelList = ({ searchLocation }) => {
 
     // 1. Filter by Search Location
     if (searchLocation && searchLocation.trim() !== '') {
-      result = result.filter(hotel => 
+      result = result.filter(hotel =>
         hotel.location.toLowerCase().includes(searchLocation.toLowerCase()) ||
         hotel.name.toLowerCase().includes(searchLocation.toLowerCase())
       );
@@ -35,7 +35,7 @@ const HotelList = ({ searchLocation }) => {
 
     const fetchQuotes = async () => {
       const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-      
+
       const payload = filteredHotels.map(hotel => {
         const ml = hotel.ml;
         return {
@@ -61,20 +61,21 @@ const HotelList = ({ searchLocation }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
-        
+
         const data = await response.json();
-        
+
         if (!cancelled) {
           setQuotesById((prev) => {
             const next = { ...prev };
-            for (const [id, price] of Object.entries(data)) {
-              next[id] = { final_price: price };
+            for (const [id, dataObj] of Object.entries(data)) {
+              next[id] = dataObj;
             }
             return next;
           });
         }
+
       } catch (error) {
         console.error("Failed to fetch batch prices", error);
       }
@@ -114,11 +115,11 @@ const HotelList = ({ searchLocation }) => {
             </h2>
             <p className="section-subtitle">Prices dynamically adjusted based on real-time demand.</p>
           </div>
-          
+
           <div className="filter-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="filter-tabs">
               {categories.map(category => (
-                <button 
+                <button
                   key={category}
                   className={`tab ${activeCategory === category ? 'active' : ''}`}
                   onClick={() => setActiveCategory(category)}
@@ -128,9 +129,9 @@ const HotelList = ({ searchLocation }) => {
               ))}
             </div>
 
-            <select 
-              className="sort-select" 
-              value={sortBy} 
+            <select
+              className="sort-select"
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               style={{
                 padding: '0.6rem 1rem',
@@ -147,7 +148,7 @@ const HotelList = ({ searchLocation }) => {
             </select>
           </div>
         </div>
-        
+
         <div className="hotel-grid">
           {processedHotels.length > 0 ? (
             processedHotels.map(hotel => (
