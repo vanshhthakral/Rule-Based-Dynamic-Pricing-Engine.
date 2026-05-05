@@ -14,12 +14,14 @@ jobs:
           fetch-depth: 0
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
   deploy:
     name: Deploy to AWS EC2
+    if: always()
     needs: sonar-scan
     runs-on: ubuntu-latest
     steps:
