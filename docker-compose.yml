@@ -1,0 +1,56 @@
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+  # Python Pricing Engine (Flask)
+  flask-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.flask
+    container_name: flask-backend
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+    restart: always
+    depends_on:
+      - mongodb
+
+  # Node.js Auth/Reviews API (Express)
+  node-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.node
+    container_name: node-backend
+    ports:
+      - "5002:5002"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/aureva
+      - JWT_SECRET=supersecretjwtkey
+      - PORT=5002
+    restart: always
+    depends_on:
+      - mongodb
+
+  # Frontend (React + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "80:80"
+    restart: always
+    depends_on:
+      - flask-backend
+      - node-backend
+
+volumes:
+  mongo_data:
