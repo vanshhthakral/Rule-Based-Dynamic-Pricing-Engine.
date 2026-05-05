@@ -132,6 +132,19 @@ def _normalize_season(raw) -> str:
     return "normal"
 
 
+_MODEL = None
+_COLUMNS = None
+
+def load_model():
+    global _MODEL, _COLUMNS
+    if _MODEL is None:
+        model_path = os.path.join(os.path.dirname(__file__), "model.pkl")
+        if os.path.exists(model_path):
+            art = joblib.load(model_path)
+            _MODEL = art["model"]
+            _COLUMNS = art["feature_columns"]
+
+
 def predict_demand(
     day_of_week: str,
     hotel: str,
@@ -142,13 +155,14 @@ def predict_demand(
     market_segment: str,
     lead_time: int,
 ) -> str:
-    model_path = os.path.join(os.path.dirname(__file__), "model.pkl")
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"{model_path} not found. Run: python demand_model.py")
+    global _MODEL, _COLUMNS
+    if _MODEL is None:
+        load_model()
+    if _MODEL is None:
+        raise FileNotFoundError("model.pkl not found. Run: python demand_model.py")
 
-    art = joblib.load(model_path)
-    clf = art["model"]
-    columns = art["feature_columns"]
+    clf = _MODEL
+    columns = _COLUMNS
 
     lead_time = max(0, int(lead_time))
     hour = (lead_time + 17) % 24
@@ -172,6 +186,44 @@ def predict_demand(
 
     X = _encode_X(row, column_order=columns)
     return clf.predict(X)[0]
+
+
+def predict_demand_batch(features_list: list[dict]) -> list[str]:
+    global _MODEL, _COLUMNS
+    if _MODEL is None:
+        load_model()
+    if _MODEL is None:
+        raise FileNotFoundError("model.pkl not found. Run: python demand_model.py")
+        
+    if not features_list:
+        return []
+
+    rows = []
+    for f in features_list:
+        lead_time = max(0, int(f.get("lead_time", 0)))
+        hour = (lead_time + 17) % 24
+        dow = str(f.get("day_of_week", "Monday")).strip()
+        if dow not in DAYS_OF_WEEK:
+            dow = "Monday"
+        is_weekend = 1 if dow in ("Saturday", "Sunday") else 0
+
+        rows.append({
+            "hour": hour,
+            "day_of_week": dow,
+            "is_weekend": is_weekend,
+            "hotel": _normalize_hotel(f.get("hotel")),
+            "season": _normalize_season(f.get("season")),
+            "adults": max(1, int(f.get("adults", 1))),
+            "children": max(0, int(f.get("children", 0))),
+            "babies": max(0, int(f.get("babies", 0))),
+            "market_segment": str(f.get("market_segment", "Undefined")).strip() or "Undefined",
+            "lead_time": lead_time,
+        })
+        
+    df_rows = pd.DataFrame(rows)
+    X = _encode_X(df_rows, column_order=_COLUMNS)
+    predictions = _MODEL.predict(X)
+    return list(predictions)
 
 
 if __name__ == "__main__":

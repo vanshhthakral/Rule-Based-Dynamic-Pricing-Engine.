@@ -35,42 +35,48 @@ const HotelList = ({ searchLocation }) => {
 
     const fetchQuotes = async () => {
       const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-      const results = await Promise.all(
-        filteredHotels.map(async (hotel) => {
-          try {
-            const ml = hotel.ml;
-            const response = await fetch('/api/calculate-price', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                base_price: hotel.pricing.basePrice,
-                day_of_week: dayOfWeek,
-                hotel: ml.hotel,
-                season: ml.season,
-                adults: ml.adults,
-                children: ml.children,
-                babies: ml.babies,
-                market_segment: ml.market_segment,
-                lead_time: ml.lead_time,
-                duration_days: 1,
-              }),
-            });
-            if (!response.ok) throw new Error(`Server returned ${response.status}`);
-            return [hotel.id, await response.json()];
-          } catch (_e) {
-            return [hotel.id, null];
+      
+      const payload = filteredHotels.map(hotel => {
+        const ml = hotel.ml;
+        return {
+          hotel_id: hotel.id,
+          features: {
+            base_price: hotel.pricing.basePrice,
+            day_of_week: dayOfWeek,
+            hotel: ml.hotel,
+            season: ml.season,
+            adults: ml.adults,
+            children: ml.children,
+            babies: ml.babies,
+            market_segment: ml.market_segment,
+            lead_time: ml.lead_time,
+            duration_days: 1,
           }
-        })
-      );
+        };
+      });
 
-      if (!cancelled) {
-        setQuotesById((prev) => {
-          const next = { ...prev };
-          for (const [id, quote] of results) {
-            next[id] = quote;
-          }
-          return next;
+      try {
+        const response = await fetch('/api/calculate-prices-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
+        
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (!cancelled) {
+          setQuotesById((prev) => {
+            const next = { ...prev };
+            for (const [id, price] of Object.entries(data)) {
+              next[id] = { final_price: price };
+            }
+            return next;
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch batch prices", error);
       }
     };
 
