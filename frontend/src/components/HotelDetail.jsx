@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockHotels, calculatePrice } from '../data/mockHotels';
 import { ArrowLeft, Star, MapPin, Check, TrendingUp, TrendingDown, Clock, ShieldCheck, Heart } from 'lucide-react';
+import ReviewSection from './ReviewSection';
 import './HotelDetail.css';
 
 const HotelDetail = () => {
@@ -103,6 +104,8 @@ const HotelDetail = () => {
                 ))}
               </div>
             </section>
+            
+            <ReviewSection hotelId={id} hotelRating={rating} totalReviews={reviews} />
           </div>
 
           <div className="hotel-detail-sidebar">

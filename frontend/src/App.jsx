@@ -5,6 +5,7 @@ import HeroSection from './components/HeroSection';
 import HotelList from './components/HotelList';
 import HotelDetail from './components/HotelDetail';
 import BookingConfirmation from './components/BookingConfirmation';
+import ReviewManagementDashboard from './components/ReviewManagementDashboard';
 import { AuthProvider } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -34,6 +35,7 @@ function App() {
             } />
             <Route path="/hotel/:id" element={<HotelDetail />} />
             <Route path="/reserve/:id" element={<BookingConfirmation />} />
+            <Route path="/admin/reviews" element={<ReviewManagementDashboard />} />
             <Route path="*" element={
               <div style={{ padding: '100px 0', textAlign: 'center', color: 'white' }}>
                 <h1 style={{ fontSize: '4rem', marginBottom: '1rem' }}>404</h1>

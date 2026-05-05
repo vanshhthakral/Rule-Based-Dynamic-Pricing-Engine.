@@ -40,6 +40,11 @@ const Navbar = () => {
           <a href="#contact" className="nav-link">
             <span>Contact</span>
           </a>
+          {user && (
+            <Link to="/admin/reviews" className={`nav-link ${location.pathname === '/admin/reviews' ? 'active' : ''}`}>
+              <span>Dashboard</span>
+            </Link>
+          )}
         </div>
 
         <div className="navbar-actions">
