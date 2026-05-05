@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import './AuthModal.css';
@@ -58,7 +59,7 @@ const AuthModal = ({ isOpen, onClose }) => {
     }
   };
 
-  return (
+  return createPortal(
     <div className={`auth-backdrop ${isAnimating ? 'active' : ''}`} onClick={handleClose}>
       <div 
         className={`auth-modal-container ${isAnimating ? 'active' : ''}`} 
@@ -177,7 +178,8 @@ const AuthModal = ({ isOpen, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
