@@ -18,7 +18,7 @@ const ReviewSection = ({ hotelId, hotelRating, totalReviews }) => {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5002/api/reviews/hotel/${hotelId}`);
+      const response = await fetch(`/api/reviews/hotel/${hotelId}`);
       if (response.ok) {
         const data = await response.json();
         setReviews(data);
@@ -42,7 +42,7 @@ const ReviewSection = ({ hotelId, hotelRating, totalReviews }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5002/api/reviews', {
+      const response = await fetch('/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
